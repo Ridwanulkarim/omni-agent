@@ -37,11 +37,14 @@ class AgentRequest(BaseModel):
 
 
 @app.get("/api/health")
+@app.get("/health")
+@app.get("/api")
 def health():
     return {"status": "ok", "service": "OmniAgent on Vercel"}
 
 
 @app.post("/api/run")
+@app.post("/run")
 def run_goal(req: AgentRequest):
     if not req.goal or not req.goal.strip():
         raise HTTPException(status_code=400, detail="Goal cannot be empty.")
