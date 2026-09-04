@@ -212,8 +212,8 @@
           <div class="col form-group">
             <label for="provider">Provider</label>
             <select id="provider">
-              <option value="groq" selected>Groq (Ultra-Fast Free Tier)</option>
-              <option value="gemini">Google Gemini (Free Tier)</option>
+              <option value="groq" selected>Groq (Ultra-Fast Free Tier — 14,400 req/day)</option>
+              <option value="gemini">Google Gemini (Free Tier — 20 req/day)</option>
             </select>
           </div>
           <div class="col form-group">
@@ -281,7 +281,7 @@
         { value: 'qwen/qwen3.8-27b', text: 'qwen/qwen3.8-27b' }
       ],
       gemini: [
-        { value: 'gemini-3.6-flash', text: 'gemini-3.6-flash (Google AI Studio)' }
+        { value: 'gemini-3.6-flash', text: 'gemini-3.6-flash (Google AI Studio — 20 req/day)' }
       ]
     };
 
@@ -325,13 +325,20 @@
             provider: provider,
             model: model,
             api_key: apiKey || undefined,
-            max_steps: 8
+            max_steps: 4
           })
         });
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({ detail: 'Request failed' }));
-          throw new Error(errData.detail || `Server error ${res.status}`);
+          let errMsg = `Server error ${res.status}`;
+          try {
+            const errData = await res.json();
+            errMsg = errData.detail || errMsg;
+          } catch {
+            const text = await res.text().catch(() => '');
+            if (text) errMsg = text;
+          }
+          throw new Error(errMsg);
         }
 
         const data = await res.json();

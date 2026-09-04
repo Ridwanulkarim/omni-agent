@@ -28,12 +28,25 @@ def get_chat_model(config: Optional[AgentConfig] = None) -> BaseChatModel:
             )
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(
+            gemini_model = ChatGoogleGenerativeAI(
                 model=model_name or "gemini-3.6-flash",
                 google_api_key=api_key,
                 temperature=config.temperature,
                 convert_system_message_to_human=False,
+                max_retries=0,
             )
+            groq_key = os.getenv("GROQ_API_KEY")
+            if groq_key:
+                from langchain_openai import ChatOpenAI
+                groq_fallback = ChatOpenAI(
+                    model="openai/gpt-oss-120b",
+                    api_key=groq_key,
+                    base_url="https://api.groq.com/openai/v1",
+                    temperature=config.temperature,
+                    max_retries=1,
+                )
+                return gemini_model.with_fallbacks([groq_fallback])
+            return gemini_model
         except ImportError:
             raise ImportError("Run: pip install langchain-google-genai")
 
