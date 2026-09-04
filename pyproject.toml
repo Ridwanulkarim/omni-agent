@@ -26,3 +26,9 @@ dependencies = [
 
 [project.scripts]
 omni = "omni_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["omni_agent*"]
+exclude = ["api*", "public*", "workspace*", "tests*"]
+
