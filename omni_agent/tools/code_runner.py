@@ -1,5 +1,6 @@
 """Python code execution tool for OmniAgent."""
 
+import os
 import subprocess
 import sys
 import tempfile
