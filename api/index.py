@@ -41,18 +41,27 @@ class AgentRequest(BaseModel):
     max_steps: Optional[int] = 8
 
 
+@app.get("/")
+@app.get("/api")
 @app.get("/api/health")
 @app.get("/health")
-@app.get("/api")
-def health():
+@app.get("/{full_path:path}")
+def handle_get(full_path: str = ""):
     if _init_error:
         return {"status": "error", "detail": _init_error}
-    return {"status": "ok", "service": "OmniAgent on Vercel"}
+    return {
+        "status": "ok",
+        "service": "OmniAgent on Vercel",
+        "path": full_path,
+    }
 
 
+@app.post("/")
+@app.post("/api")
 @app.post("/api/run")
 @app.post("/run")
-def run_goal(req: AgentRequest):
+@app.post("/{full_path:path}")
+def run_goal(req: AgentRequest, full_path: str = ""):
     if _init_error:
         raise HTTPException(status_code=500, detail=f"Backend startup issue: {_init_error}")
     if not req.goal or not req.goal.strip():
