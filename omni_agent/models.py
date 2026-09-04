@@ -47,12 +47,15 @@ def get_chat_model(config: Optional[AgentConfig] = None) -> BaseChatModel:
                 "👉 Get a free key at https://console.groq.com/keys"
             )
         from langchain_openai import ChatOpenAI
+        target_model = model_name or "qwen/qwen3.8-27b"
+        if "llama" in target_model.lower():
+            target_model = "qwen/qwen3.8-27b"
         return ChatOpenAI(
-            model=model_name or "llama-3.3-70b-versatile",
+            model=target_model,
             api_key=api_key,
             base_url="https://api.groq.com/openai/v1",
             temperature=config.temperature,
-            max_retries=6,
+            max_retries=2,
         )
 
     # 3. GitHub Models (100% Free with standard GitHub Personal Access Token)

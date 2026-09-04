@@ -21,7 +21,7 @@ def execute_python(
     code: Optional[str] = None,
     script: Optional[str] = None,
     python_code: Optional[str] = None,
-    timeout: int = 30,
+    timeout: int = 15,
 ) -> str:
     """Execute Python code in an isolated subprocess and return the output (stdout and stderr).
     
@@ -32,7 +32,7 @@ def execute_python(
         code: Complete Python script or code block to run.
         script: Alias for code.
         python_code: Alias for code.
-        timeout: Maximum execution time in seconds (default: 30).
+        timeout: Maximum execution time in seconds (default: 15).
     """
     target_code = code or script or python_code
     if not target_code:
@@ -48,7 +48,7 @@ def execute_python(
 
     try:
         result = subprocess.run(
-            [sys.executable, str(temp_file_path.name)],
+            [sys.executable, str(temp_file_path.resolve())],
             cwd=workspace,
             capture_output=True,
             text=True,

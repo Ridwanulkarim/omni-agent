@@ -219,9 +219,9 @@
           <div class="col form-group">
             <label for="model">Model</label>
             <select id="model">
-              <option value="llama-3.3-70b-versatile" selected>llama-3.3-70b-versatile</option>
-              <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b</option>
-              <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+              <option value="qwen/qwen3.8-27b" selected>qwen/qwen3.8-27b (Ultra-Fast & Free)</option>
+              <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (High Capability)</option>
+              <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
             </select>
           </div>
           <div class="col form-group">
@@ -274,8 +274,9 @@
 
     const providerModels = {
       groq: [
-        { value: 'llama-3.3-70b-versatile', text: 'llama-3.3-70b-versatile (Fast & Free)' },
-        { value: 'qwen/qwen3.8-27b', text: 'qwen/qwen3.8-27b' }
+        { value: 'qwen/qwen3.8-27b', text: 'qwen/qwen3.8-27b (Ultra-Fast & Free)' },
+        { value: 'openai/gpt-oss-120b', text: 'openai/gpt-oss-120b (High Capability)' },
+        { value: 'openai/gpt-oss-20b', text: 'openai/gpt-oss-20b' }
       ],
       gemini: [
         { value: 'gemini-3.6-flash', text: 'gemini-3.6-flash (Google AI Studio)' }

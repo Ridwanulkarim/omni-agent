@@ -22,6 +22,13 @@ from omni_agent.prompts import (
     SYNTHESIZER_SYSTEM_PROMPT,
 )
 
+def clean_thinking(text: str) -> str:
+    """Strip reasoning/thought blocks like <think>...</think> produced by reasoning models."""
+    if not text or not isinstance(text, str):
+        return text or ""
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    return cleaned.strip()
+
 
 def prune_messages_for_context(
     messages: List[BaseMessage],
@@ -129,7 +136,8 @@ def create_omni_agent(config: AgentConfig = default_config):
         
         try:
             resp = llm.invoke(prompt)
-            content = resp.content.strip()
+            raw_content = resp.content if isinstance(resp.content, str) else str(resp.content)
+            content = clean_thinking(raw_content)
             # Clean markdown code blocks if present
             content = re.sub(r"^```json\s*", "", content, flags=re.IGNORECASE)
             content = re.sub(r"^```\s*", "", content)
@@ -297,14 +305,15 @@ def create_omni_agent(config: AgentConfig = default_config):
                         f"or 'INCOMPLETE: <guidance>' if more work is needed."
             )
         ]
-        review = llm.invoke(verification_prompt).content.strip()
-
+        raw_review = llm.invoke(verification_prompt).content
+        review = clean_thinking(raw_review if isinstance(raw_review, str) else str(raw_review)).strip()
         review_lower = review.lower()
         is_step_done = (
-            review.startswith("COMPLETED")
-            or "completed" in review_lower[:40]
-            or "is complete" in review_lower[:40]
-            or "is verified" in review_lower[:40]
+            "completed" in review_lower
+            or "is complete" in review_lower
+            or "is verified" in review_lower
+            or "satisfied" in review_lower
+            or "success" in review_lower
         )
 
         if is_step_done:
@@ -360,7 +369,8 @@ def create_omni_agent(config: AgentConfig = default_config):
                         + "\n\nPlease deliver the final synthesized response."
             )
         ]
-        final_answer = llm.invoke(synthesis_prompt).content
+        raw_final = llm.invoke(synthesis_prompt).content
+        final_answer = clean_thinking(raw_final if isinstance(raw_final, str) else str(raw_final)).strip()
         return {
             "final_response": final_answer,
             "messages": [AIMessage(content=final_answer)],

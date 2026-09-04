@@ -1,5 +1,6 @@
 """Safe shell execution tool for OmniAgent."""
 
+import shutil
 import subprocess
 from typing import Optional
 from langchain_core.tools import tool
@@ -17,7 +18,7 @@ def set_active_config(config: AgentConfig):
 def run_shell_command(
     command: Optional[str] = None,
     cmd: Optional[str] = None,
-    timeout: int = 30,
+    timeout: int = 15,
 ) -> str:
     """Execute a bash shell command inside the workspace directory.
     
@@ -27,7 +28,7 @@ def run_shell_command(
     Args:
         command: The shell command line to execute.
         cmd: Alias for command.
-        timeout: Maximum duration in seconds before terminating the process (default: 30).
+        timeout: Maximum duration in seconds before terminating the process (default: 15).
     """
     target_cmd = command or cmd
     if not target_cmd:
@@ -35,6 +36,8 @@ def run_shell_command(
 
     workspace = _active_config.workspace_dir.resolve()
     workspace.mkdir(parents=True, exist_ok=True)
+
+    shell_bin = shutil.which("bash") or "/bin/sh"
 
     try:
         result = subprocess.run(
@@ -44,7 +47,7 @@ def run_shell_command(
             capture_output=True,
             text=True,
             timeout=timeout,
-            executable="/bin/bash",
+            executable=shell_bin,
         )
         output_parts = []
         if result.stdout.strip():
