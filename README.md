@@ -11,7 +11,20 @@ pinned: false
 
 # 🤖 OmniAgent: Autonomous General-Purpose AI Agent
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black?style=for-the-badge&logo=vercel)](https://omni-agent2.vercel.app/)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/Ridwanulkarim/omni-agent)
+[![Free Tier](https://img.shields.io/badge/100%25-Free%20Tier-success?style=for-the-badge)](https://console.groq.com)
+
+> 🚀 **Live Web Application**: Access OmniAgent directly in your browser at **[https://omni-agent2.vercel.app/](https://omni-agent2.vercel.app/)**
+
 OmniAgent is a stateful, autonomous AI agent application built in Python using **LangGraph**. Designed as a versatile "do-everything" agent, it decomposes complex goals into dynamic multi-step plans, executes them with a comprehensive tool suite (web search, web scraping, code execution, shell commands, and sandboxed file management), self-reflects on results, and recovers from errors.
+
+---
+
+## 🌐 Live Deployment
+* **Vercel Web Dashboard**: [https://omni-agent2.vercel.app/](https://omni-agent2.vercel.app/)
+* **Engine**: FastAPI + Serverless Python on Vercel
+* **Supported Models**: Meta Llama 3.3 70B (Groq), Qwen 2.5 (Groq), Google Gemini 3.6 Flash
 
 ---
 
