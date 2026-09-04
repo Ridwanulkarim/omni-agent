@@ -316,7 +316,8 @@ def create_omni_agent(config: AgentConfig = default_config):
             or "success" in review_lower
         )
 
-        if is_step_done:
+        has_tool_output = any(isinstance(m, ToolMessage) for m in state["messages"])
+        if is_step_done or has_tool_output or state.get("iteration", 0) >= 3:
             current_step.status = "completed"
             next_idx = step_idx + 1
             if next_idx < len(plan.steps):
@@ -344,7 +345,7 @@ def create_omni_agent(config: AgentConfig = default_config):
         if state.get("is_completed", False):
             return "synthesizer"
         iteration = state.get("iteration", 0)
-        max_iter = state.get("max_iterations", config.max_steps)
+        max_iter = min(state.get("max_iterations", config.max_steps), 4)
         if iteration >= max_iter:
             return "synthesizer"
         return "executor"

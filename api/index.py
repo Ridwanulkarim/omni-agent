@@ -89,7 +89,7 @@ def run_goal(req: AgentRequest, full_path: str = ""):
 
     config = AgentConfig()
     config.workspace_dir = workspace_path
-    config.max_steps = min(req.max_steps or 8, 12)
+    config.max_steps = min(req.max_steps or 4, 6)
     config.provider = provider_clean
     config.model = raw_model
 
