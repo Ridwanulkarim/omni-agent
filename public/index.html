@@ -219,9 +219,10 @@
           <div class="col form-group">
             <label for="model">Model</label>
             <select id="model">
-              <option value="qwen/qwen3.8-27b" selected>qwen/qwen3.8-27b (Ultra-Fast & Free)</option>
-              <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (High Capability)</option>
-              <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
+              <option value="openai/gpt-oss-120b" selected>openai/gpt-oss-120b (High Capability & Free)</option>
+              <option value="qwen/qwen3.6-27b">qwen/qwen3.6-27b (Ultra-Fast)</option>
+              <option value="openai/gpt-oss-20b">openai/gpt-oss-20b (Lightweight)</option>
+              <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b</option>
             </select>
           </div>
           <div class="col form-group">
@@ -274,9 +275,10 @@
 
     const providerModels = {
       groq: [
-        { value: 'qwen/qwen3.8-27b', text: 'qwen/qwen3.8-27b (Ultra-Fast & Free)' },
-        { value: 'openai/gpt-oss-120b', text: 'openai/gpt-oss-120b (High Capability)' },
-        { value: 'openai/gpt-oss-20b', text: 'openai/gpt-oss-20b' }
+        { value: 'openai/gpt-oss-120b', text: 'openai/gpt-oss-120b (High Capability & Free)' },
+        { value: 'qwen/qwen3.6-27b', text: 'qwen/qwen3.6-27b (Ultra-Fast)' },
+        { value: 'openai/gpt-oss-20b', text: 'openai/gpt-oss-20b (Lightweight)' },
+        { value: 'qwen/qwen3.8-27b', text: 'qwen/qwen3.8-27b' }
       ],
       gemini: [
         { value: 'gemini-3.6-flash', text: 'gemini-3.6-flash (Google AI Studio)' }

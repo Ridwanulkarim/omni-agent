@@ -204,54 +204,23 @@ def create_omni_agent(config: AgentConfig = default_config):
                 HumanMessage(content=f"Continue executing step {step_idx + 1}: {current_step.description if current_step else 'conclude'}")
             )
 
-        import time
-        max_attempts = 3
         response = None
-        for attempt in range(max_attempts):
-            try:
-                response = llm_with_tools.invoke(messages_to_send)
-                break
-            except Exception as e:
-                error_str = str(e)
-                # Handle 413 context too large / TPM limit
-                if "413" in error_str or "Request too large" in error_str:
-                    emergency_prompt = [
-                        system_instruction,
-                        state["messages"][0],
-                        HumanMessage(content=f"Execute step {step_idx + 1}: {current_step.description if current_step else 'conclude'}")
-                    ]
-                    try:
-                        response = llm_with_tools.invoke(emergency_prompt)
-                        break
-                    except Exception as e_em:
-                        error_str = str(e_em)
-
-                if "Rate limit" in error_str or "429" in error_str:
-                    delay = 8.0
-                    match = re.search(r"try again in (\d+(\.\d+)?)s", error_str)
-                    if match:
-                        delay = float(match.group(1)) + 1.0
-                    time.sleep(delay)
-                    if attempt == max_attempts - 1:
-                        response = AIMessage(content=f"Rate limit reached after retries: {error_str[:150]}")
-                elif "Failed to parse tool call arguments" in error_str or "tool_use_failed" in error_str:
-                    retry_msg = HumanMessage(
-                        content=(
-                            f"Notice: The tool call had a syntax/formatting error: {error_str[:120]}. "
-                            "Please call the tool again with clean, properly escaped JSON strings and no trailing brackets."
-                        )
-                    )
-                    try:
-                        response = llm_with_tools.invoke(messages_to_send + [retry_msg])
-                        break
-                    except Exception as e2:
-                        response = AIMessage(content=f"Error running tool step: {str(e2)[:200]}")
-                        break
-                else:
-                    if attempt == max_attempts - 1:
-                        response = AIMessage(content=f"Execution error: {error_str[:200]}")
-                        break
-                    time.sleep(2.0)
+        try:
+            response = llm_with_tools.invoke(messages_to_send)
+        except Exception as e:
+            error_str = str(e)
+            if "413" in error_str or "Request too large" in error_str:
+                emergency_prompt = [
+                    system_instruction,
+                    state["messages"][0],
+                    HumanMessage(content=f"Execute step {step_idx + 1}: {current_step.description if current_step else 'conclude'}")
+                ]
+                try:
+                    response = llm_with_tools.invoke(emergency_prompt)
+                except Exception as e_em:
+                    response = AIMessage(content=f"Notice: {str(e_em)[:150]}")
+            else:
+                response = AIMessage(content=f"Notice: {error_str[:150]}")
 
         return {
             "messages": [response],
@@ -262,18 +231,22 @@ def create_omni_agent(config: AgentConfig = default_config):
     # 3. Router
     # -------------------------------------------------------------
     def should_continue(state: AgentState) -> Literal["tools", "verifier", "synthesizer"]:
-        messages = state["messages"]
-        last_message = messages[-1]
-        
-        # If tool calls were requested, execute tools
-        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-            return "tools"
-
-        # Check safety guardrails
         iteration = state.get("iteration", 0)
-        max_iter = state.get("max_iterations", config.max_steps)
+        max_iter = min(state.get("max_iterations", config.max_steps), 3)
+        
+        # Hard stop if maximum iterations reached
         if iteration >= max_iter:
             return "synthesizer"
+
+        messages = state.get("messages", [])
+        last_message = messages[-1] if messages else None
+        
+        # If tool calls were requested, execute tools up to 2 tool turns
+        if last_message and hasattr(last_message, "tool_calls") and last_message.tool_calls:
+            tool_turns = sum(1 for m in messages if isinstance(m, ToolMessage))
+            if tool_turns >= 2:
+                return "synthesizer"
+            return "tools"
 
         return "verifier"
 
@@ -344,8 +317,10 @@ def create_omni_agent(config: AgentConfig = default_config):
     def verifier_router(state: AgentState) -> Literal["executor", "synthesizer"]:
         if state.get("is_completed", False):
             return "synthesizer"
+        if any(isinstance(m, ToolMessage) for m in state.get("messages", [])):
+            return "synthesizer"
         iteration = state.get("iteration", 0)
-        max_iter = min(state.get("max_iterations", config.max_steps), 4)
+        max_iter = min(state.get("max_iterations", config.max_steps), 3)
         if iteration >= max_iter:
             return "synthesizer"
         return "executor"

@@ -47,16 +47,36 @@ def get_chat_model(config: Optional[AgentConfig] = None) -> BaseChatModel:
                 "👉 Get a free key at https://console.groq.com/keys"
             )
         from langchain_openai import ChatOpenAI
-        target_model = model_name or "qwen/qwen3.8-27b"
-        if "llama" in target_model.lower():
-            target_model = "qwen/qwen3.8-27b"
-        return ChatOpenAI(
-            model=target_model,
+        requested_model = (model_name or "openai/gpt-oss-120b").strip()
+        if "llama" in requested_model.lower():
+            requested_model = "openai/gpt-oss-120b"
+
+        # Free tier model pool on Groq with independent daily rate/token quotas
+        free_models = [
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.6-27b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
+        ]
+        ordered_models = [requested_model] + [m for m in free_models if m != requested_model]
+        primary_model = ChatOpenAI(
+            model=ordered_models[0],
             api_key=api_key,
             base_url="https://api.groq.com/openai/v1",
             temperature=config.temperature,
-            max_retries=2,
+            max_retries=1,
         )
+        fallbacks = [
+            ChatOpenAI(
+                model=m,
+                api_key=api_key,
+                base_url="https://api.groq.com/openai/v1",
+                temperature=config.temperature,
+                max_retries=1,
+            )
+            for m in ordered_models[1:]
+        ]
+        return primary_model.with_fallbacks(fallbacks)
 
     # 3. GitHub Models (100% Free with standard GitHub Personal Access Token)
     elif provider in ("github", "github_models"):

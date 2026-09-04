@@ -36,9 +36,9 @@ except Exception as e:
 class AgentRequest(BaseModel):
     goal: str
     provider: Optional[str] = "groq"
-    model: Optional[str] = "qwen/qwen3.8-27b"
+    model: Optional[str] = "openai/gpt-oss-120b"
     api_key: Optional[str] = None
-    max_steps: Optional[int] = 8
+    max_steps: Optional[int] = 4
 
 
 @app.get("/")
@@ -73,11 +73,11 @@ def run_goal(req: AgentRequest, full_path: str = ""):
     workspace_path.mkdir(parents=True, exist_ok=True)
 
     raw_provider = (req.provider or "groq").strip().lower()
-    raw_model = (req.model or "qwen/qwen3.8-27b").strip()
+    raw_model = (req.model or "openai/gpt-oss-120b").strip()
 
     # Map deprecated or unavailable models to active ones
     if "llama" in raw_model.lower():
-        raw_model = "qwen/qwen3.8-27b"
+        raw_model = "openai/gpt-oss-120b"
 
     # Smart auto-detection to prevent mismatches
     if "gemini" in raw_model.lower():
