@@ -1,0 +1,159 @@
+import os
+import sys
+import uuid
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+
+# Add project root to sys.path so omni_agent can be imported
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from langchain_core.messages import HumanMessage
+
+from omni_agent.config import AgentConfig
+from omni_agent.graph import create_omni_agent
+
+app = FastAPI(title="OmniAgent API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class AgentRequest(BaseModel):
+    goal: str
+    provider: Optional[str] = "groq"
+    model: Optional[str] = "llama-3.3-70b-versatile"
+    api_key: Optional[str] = None
+    max_steps: Optional[int] = 8
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "service": "OmniAgent on Vercel"}
+
+
+@app.post("/api/run")
+def run_goal(req: AgentRequest):
+    if not req.goal or not req.goal.strip():
+        raise HTTPException(status_code=400, detail="Goal cannot be empty.")
+
+    # On Vercel, the only writable directory is /tmp
+    is_vercel = os.getenv("VERCEL", "0") == "1"
+    workspace_path = Path("/tmp/omni_workspace").resolve() if is_vercel else Path("./workspace").resolve()
+    workspace_path.mkdir(parents=True, exist_ok=True)
+
+    config = AgentConfig()
+    config.workspace_dir = workspace_path
+    config.max_steps = min(req.max_steps or 8, 12)
+    config.provider = req.provider or "groq"
+    config.model = req.model or "llama-3.3-70b-versatile"
+
+    # API key resolution: request body, or environment variables
+    if req.api_key and req.api_key.strip():
+        key_val = req.api_key.strip()
+        if config.provider == "groq":
+            os.environ["GROQ_API_KEY"] = key_val
+        else:
+            os.environ["GEMINI_API_KEY"] = key_val
+            config.gemini_api_key = key_val
+
+    try:
+        app_engine = create_omni_agent(config)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent initialization error: {str(e)}")
+
+    initial_state = {
+        "user_goal": req.goal.strip(),
+        "messages": [HumanMessage(content=req.goal.strip())],
+        "iteration": 0,
+        "max_iterations": config.max_steps,
+        "is_completed": False,
+    }
+    thread_id = str(uuid.uuid4())
+    thread_config = {"configurable": {"thread_id": thread_id}}
+
+    steps_log = []
+    final_response = ""
+    plan_info = None
+
+    try:
+        for event in app_engine.stream(initial_state, thread_config, stream_mode="updates"):
+            for node_name, node_output in event.items():
+                if node_name == "planner":
+                    plan = node_output.get("plan")
+                    if plan:
+                        plan_info = {
+                            "goal": plan.goal,
+                            "steps": [
+                                {
+                                    "step_id": s.step_id,
+                                    "description": s.description,
+                                    "status": s.status,
+                                }
+                                for s in plan.steps
+                            ],
+                        }
+                elif node_name == "executor":
+                    msgs = node_output.get("messages", [])
+                    if msgs:
+                        last = msgs[-1]
+                        if hasattr(last, "tool_calls") and last.tool_calls:
+                            for tc in last.tool_calls:
+                                steps_log.append({
+                                    "type": "tool_call",
+                                    "name": tc["name"],
+                                    "args": tc["args"],
+                                })
+                        elif last.content:
+                            steps_log.append({
+                                "type": "thought",
+                                "content": str(last.content)[:250],
+                            })
+                elif node_name == "tools":
+                    msgs = node_output.get("messages", [])
+                    for m in msgs:
+                        steps_log.append({
+                            "type": "tool_output",
+                            "content": str(m.content)[:300],
+                        })
+                elif node_name == "verifier":
+                    steps_log.append({
+                        "type": "verifier",
+                        "is_completed": node_output.get("is_completed", False),
+                        "feedback": node_output.get("verification_feedback"),
+                    })
+                elif node_name == "synthesizer":
+                    final_response = node_output.get("final_response", "")
+
+        # Inspect any generated files
+        created_files = []
+        if workspace_path.exists():
+            for f in sorted(workspace_path.rglob("*")):
+                if f.is_file() and not f.name.startswith("."):
+                    try:
+                        created_files.append({
+                            "name": str(f.relative_to(workspace_path)),
+                            "content": f.read_text(encoding="utf-8", errors="replace")[:4000],
+                        })
+                    except Exception:
+                        pass
+
+        return {
+            "success": True,
+            "plan": plan_info,
+            "steps": steps_log,
+            "final_response": final_response or "Goal executed.",
+            "files": created_files,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Execution error: {str(e)}")
