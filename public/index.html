@@ -269,6 +269,29 @@
     const finalContent = document.getElementById('finalContent');
     const filesSection = document.getElementById('filesSection');
     const filesList = document.getElementById('filesList');
+    const providerSelect = document.getElementById('provider');
+    const modelSelect = document.getElementById('model');
+
+    const providerModels = {
+      groq: [
+        { value: 'llama-3.3-70b-versatile', text: 'llama-3.3-70b-versatile (Fast & Free)' },
+        { value: 'qwen/qwen3.8-27b', text: 'qwen/qwen3.8-27b' }
+      ],
+      gemini: [
+        { value: 'gemini-3.6-flash', text: 'gemini-3.6-flash (Google AI Studio)' }
+      ]
+    };
+
+    providerSelect.addEventListener('change', () => {
+      const p = providerSelect.value;
+      modelSelect.innerHTML = '';
+      (providerModels[p] || []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.value;
+        opt.innerText = m.text;
+        modelSelect.appendChild(opt);
+      });
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -354,7 +377,7 @@
         }
 
       } catch (err) {
-        finalContent.innerHTML = `<span style="color:#ef4444;">Error: ${err.message}</span>`;
+        finalContent.innerHTML = `<div style="color:#fca5a5; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:14px; border-radius:8px;"><strong>⚠️ Notice:</strong><br>${err.message}</div>`;
       } finally {
         submitBtn.disabled = false;
         spinner.style.display = 'none';

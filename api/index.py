@@ -54,20 +54,43 @@ def run_goal(req: AgentRequest):
     workspace_path = Path("/tmp/omni_workspace").resolve() if is_vercel else Path("./workspace").resolve()
     workspace_path.mkdir(parents=True, exist_ok=True)
 
+    raw_provider = (req.provider or "groq").strip().lower()
+    raw_model = (req.model or "llama-3.3-70b-versatile").strip()
+
+    # Smart auto-detection to prevent mismatches
+    if "gemini" in raw_model.lower():
+        provider_clean = "gemini"
+    elif "llama" in raw_model.lower() or "qwen" in raw_model.lower():
+        provider_clean = "groq"
+    else:
+        provider_clean = raw_provider
+
     config = AgentConfig()
     config.workspace_dir = workspace_path
     config.max_steps = min(req.max_steps or 8, 12)
-    config.provider = req.provider or "groq"
-    config.model = req.model or "llama-3.3-70b-versatile"
+    config.provider = provider_clean
+    config.model = raw_model
 
     # API key resolution: request body, or environment variables
     if req.api_key and req.api_key.strip():
         key_val = req.api_key.strip()
-        if config.provider == "groq":
+        if provider_clean == "groq":
             os.environ["GROQ_API_KEY"] = key_val
         else:
             os.environ["GEMINI_API_KEY"] = key_val
             config.gemini_api_key = key_val
+
+    # Verify that the required API key is available
+    if provider_clean == "groq" and not os.getenv("GROQ_API_KEY"):
+        raise HTTPException(
+            status_code=400,
+            detail="Missing Groq API Key. Please enter your Groq API key in the 'API Key' field or set GROQ_API_KEY in Vercel Environment Variables.",
+        )
+    elif provider_clean == "gemini" and not (config.gemini_api_key or os.getenv("GEMINI_API_KEY")):
+        raise HTTPException(
+            status_code=400,
+            detail="Missing Gemini API Key. Please enter your Gemini API key in the 'API Key' field or set GEMINI_API_KEY in Vercel Environment Variables.",
+        )
 
     try:
         app_engine = create_omni_agent(config)
