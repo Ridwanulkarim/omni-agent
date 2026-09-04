@@ -12,10 +12,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from langchain_core.messages import HumanMessage
-
-from omni_agent.config import AgentConfig
-from omni_agent.graph import create_omni_agent
 
 app = FastAPI(title="OmniAgent API")
 
@@ -26,6 +22,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_init_error = None
+try:
+    from langchain_core.messages import HumanMessage
+    from omni_agent.config import AgentConfig
+    from omni_agent.graph import create_omni_agent
+except Exception as e:
+    import traceback
+    _init_error = f"Import Error: {str(e)}\n{traceback.format_exc()}"
 
 
 class AgentRequest(BaseModel):
@@ -40,12 +45,16 @@ class AgentRequest(BaseModel):
 @app.get("/health")
 @app.get("/api")
 def health():
+    if _init_error:
+        return {"status": "error", "detail": _init_error}
     return {"status": "ok", "service": "OmniAgent on Vercel"}
 
 
 @app.post("/api/run")
 @app.post("/run")
 def run_goal(req: AgentRequest):
+    if _init_error:
+        raise HTTPException(status_code=500, detail=f"Backend startup issue: {_init_error}")
     if not req.goal or not req.goal.strip():
         raise HTTPException(status_code=400, detail="Goal cannot be empty.")
 
