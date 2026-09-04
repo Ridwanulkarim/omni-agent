@@ -1,0 +1,19 @@
+# Environment variables & API keys
+.env
+*.env
+
+# Python Virtual Environment
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Cache and logs
+.pytest_cache/
+*.log
+
+# Ephemeral workspace files (keep workspace dir structure)
+workspace/*
+!workspace/.gitkeep
